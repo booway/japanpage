@@ -15,7 +15,7 @@ module StreamHelper
     elsif controller.instance_of?(MentionsController)
       mentions_path(:max_time => time_for_scroll(@stream))
     elsif controller.instance_of?(MultisController)
-      multi_path(:max_time => time_for_scroll(@stream))
+      multi_stream_path(:max_time => time_for_scroll(@stream))
     elsif controller.instance_of?(PostsController)
       public_stream_path(:max_time => time_for_scroll(@stream))
     elsif controller.instance_of?(AspectsController)

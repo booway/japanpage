@@ -4,7 +4,6 @@
 
 Diaspora::Application.routes.draw do
 
-
   # Posting and Reading
 
   resources :reshares
@@ -20,12 +19,19 @@ Diaspora::Application.routes.draw do
     resources :comments, :only => [:new, :create, :destroy, :index]
   end
   get 'p/:id' => 'posts#show', :as => 'short_post'
-  get 'public_stream' => 'posts#index', :as => 'public_stream'
   # roll up likes into a nested resource above
   resources :comments, :only => [:create, :destroy] do
     resources :likes, :only => [:create, :destroy, :index]
   end
 
+  # Streams
+  get "public" => "posts#public", :as => "public_stream"
+  get "stream" => "posts#multi", :as => "multi_stream"
+  get "followed_tags" => "posts#followed_tags", :as => "followed_tags_stream"
+  get "mentions" => "posts#mentioned", :as => "mentioned_stream"
+  get "liked" => "posts#liked", :as => "liked_stream"
+  get "commented" => "posts#commented", :as => "commented_stream"
+  get "aspects" => "posts#aspects", :as => "aspects_stream"
 
   get 'bookmarklet' => 'status_messages#bookmarklet'
 
@@ -54,22 +60,15 @@ Diaspora::Application.routes.draw do
   end
 
   post   "multiple_tag_followings" => "tag_followings#create_multiple", :as => 'multiple_tag_followings'
-
-  get "tag_followings" => "tag_followings#index", :as => 'tag_followings'
-  resources :mentions, :only => [:index]
   resources "tag_followings", :only => [:create]
-
-  get 'comment_stream' => 'comment_stream#index', :as => 'comment_stream'
-
-  get 'like_stream' => 'like_stream#index', :as => 'like_stream'
 
   get 'tags/:name' => 'tags#show', :as => 'tag'
 
   resources :apps, :only => [:show]
 
   #Cubbies info page
-  resource :token, :only => :show
 
+  resource :token, :only => :show
 
   # Users and people
 
@@ -119,8 +118,6 @@ Diaspora::Application.routes.draw do
   resources :blocks, :only => [:create, :destroy]
 
   get 'community_spotlight' => "contacts#spotlight", :as => 'community_spotlight'
-
-  get 'stream' => "multis#index", :as => 'multi'
 
   resources :people, :except => [:edit, :update] do
     resources :status_messages

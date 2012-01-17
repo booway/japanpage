@@ -4,6 +4,13 @@
 
 require 'spec_helper'
 
+require File.join(Rails.root, "lib", "stream", "aspect")
+require File.join(Rails.root, "lib", "stream", "multi")
+require File.join(Rails.root, "lib", "stream", "comments")
+require File.join(Rails.root, "lib", "stream", "likes")
+require File.join(Rails.root, "lib", "stream", "mention")
+require File.join(Rails.root, "lib", "stream", "followed_tag")
+
 describe PostsController do
   before do
     aspect = alice.aspects.first
@@ -138,22 +145,44 @@ describe PostsController do
     end
   end
 
-  describe '#index' do
+  context 'streams' do
     before do
       sign_in alice
     end
 
-    it 'will succeed if admin' do
-      AppConfig[:admins] = [alice.username]
-      get :index
-      response.should be_success
+    describe "#public" do
+      it 'will succeed if admin' do
+        AppConfig[:admins] = [alice.username]
+        get :public
+        response.should be_success
+      end
+
+      it 'will redirect if not' do
+        AppConfig[:admins] = []
+        get :public
+        response.should be_redirect
+      end
     end
 
-    it 'will redirect if not' do
-      AppConfig[:admins] = []
-      get :index
-      response.should be_redirect
-    end
+    streams = [
+      {:path => :multi, :type => Stream::Multi},
+      {:path => :liked, :type => Stream::Likes},
+      {:path => :mentioned, :type => Stream::Mention},
+      {:path => :followed_tags, :type => Stream::FollowedTag}
+    ]
 
+    streams.each do |s|
+      describe "##{s[:path]}" do
+        it 'succeeds' do
+          get s[:path]
+          response.should be_success
+        end
+
+        it 'assigns a stream' do
+          get s[:path]
+          assigns[:stream].should be_a s[:type]
+        end
+      end
+    end
   end
 end

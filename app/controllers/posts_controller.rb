@@ -2,12 +2,11 @@
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
 
-require File.join(Rails.root, 'lib', 'stream', 'public')
-
 class PostsController < ApplicationController
   before_filter :authenticate_user!, :except => :show
   before_filter :set_format_if_malformed_from_status_net, :only => :show
   before_filter :redirect_unless_admin, :only => :index
+  before_filter :save_selected_aspects, :only => :aspects
 
   respond_to :html,
              :mobile,
@@ -54,7 +53,7 @@ class PostsController < ApplicationController
       respond_to do |format|
         format.js {render 'destroy'}
         format.json { render :nothing => true, :status => 204 }
-        format.all {redirect_to multi_path}
+        format.all {redirect_to multi_stream_path}
       end
     else
       Rails.logger.info "event=post_destroy status=failure user=#{current_user.diaspora_handle} reason='User does not own post'"
@@ -62,15 +61,55 @@ class PostsController < ApplicationController
     end
   end
 
-  def index
-    default_stream_action(Stream::Public)
+
+  def aspects
+    stream_klass = Stream::Aspect
+    aspect_ids = (session[:a_ids] ? session[:a_ids] : [])
+    @stream = Stream::Aspect.new(current_user, aspect_ids,
+                                 :max_time => params[:max_time].to_i)
+
+    respond_with do |format|
+      format.html { render 'aspects/index' }
+      format.json{ render_for_api :backbone, :json => @stream.stream_posts, :root => :posts }
+    end
+  end
+
+  def public
+    stream_responder(Stream::Public)
+  end
+
+  def multi
+    stream_responder(Stream::Multi)
+  end
+
+  def commented
+    stream_responder(Stream::Comments)
+  end
+
+  def liked
+    stream_responder(Stream::Likes)
+  end
+
+  def mentioned
+    stream_responder(Stream::Mention)
+  end
+
+  def followed_tags
+    stream_responder(Stream::FollowedTag)
+  end
+
+  private
+
+  def stream_responder(stream_klass)
+    respond_with do |format|
+      format.html{ default_stream_action(stream_klass) }
+      format.json{ stream_json(stream_klass) }
+    end
   end
 
   def set_format_if_malformed_from_status_net
    request.format = :html if request.format == 'application/html+xml'
   end
-
-  private
 
   def user_can_not_comment_on_post?
     if @post.public && @post.author.local?
